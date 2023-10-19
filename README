@@ -1,0 +1,15 @@
+###################################
+DEEP-MPATK
+Deep-Mantle Plume Analysis ToolKit
+###################################
+
+install python packages:
+- numpy 
+- matplotlib (plotting)
+- sklearn (unsupervised learning algorithm and statistics)
+- csv
+- os
+- cmcrameri (scientific color maps)
+
+change the file paths and analysis parameters in set_DeepMPATK_pars.py
+run the shell script run_DeepMPATK.sh
