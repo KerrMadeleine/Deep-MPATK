@@ -3,6 +3,12 @@ import stagyypythonmodule as spm
 import set_DeepMPATK_pars as par
 import csv
 
+'''
+This script reads in the txt file that supplied information about the onset of convection.
+It then writes this information to the pipeline parameter file for use in the next 
+stage of the analysis which is to detect plumes.
+'''
+
 MODS=par.STAGYY_OUTPUT_MODS
 
 BL_X_KM=[]

@@ -4,6 +4,13 @@ import csv;
 import sys;
 import ALLDATA4 as AD4
 
+"""
+This script reads the StagYY output file "time.dat" and plots boundary heat flow 
+and other global properties of the model at each time step. This script does not 
+participate in the main sequence.
+"""
+
+# TODO: make this a global parameter
 writeData=False
 
 baseDir = '/Users/mkerr/VenusResearch/2023/STAGYY/Analysis/fromPerl/'

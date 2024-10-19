@@ -11,6 +11,11 @@ import csv
 import os
 import stagyypythonmodule as spm
 
+'''
+This script does roughly the same thing as the pipeline.py script in its 3rd run. 
+However, this script splits the time domain into "snippets" in order to take average values
+of plume dimensions and clustering groups within intervals throughout the model evolution.
+'''
 
 DIR=par.STAGYY_OUTPUT_FOLDER
 TIMEDIR= par.STAGYY_OUTPUT_FOLDER
@@ -59,8 +64,7 @@ if BL_X_KM==[]:
 
 startindmod=par.STAGYY_OUTPUT_MODS_0
 endin=par.STAGYY_OUTPUT_MODS_1
-#startingTS=int(N_ONSET[startindmod])
-#endingTS=SPT1[startindmod]
+
 jump=par.SNIPPETS_JUMP
 
 MODS=MODS[startindmod:endin]
@@ -80,6 +84,7 @@ TDIRS=[TIMEDIR+mod for mod in MODS]
 
 # NUM_TimeSteps (the exact number of output files output by StagYY)
 NUM_TimeSteps = [len([file for file in os.listdir(dir) if file[0:2]=='t_']) for dir in DIRS] #new
+
 # Turn the number of output files into a string to loop through
 NUMS=[[str(i).zfill(5) for i in range(0,NUM_TimeSteps[j])] for j in range(len(MODS))]
 
@@ -127,20 +132,22 @@ AVG_PL_NO=[]
 for i in range(len(DIRS)): #for each of the models
     dir=DIRS[i]
     print('******** CURRENT DIR:',dir,' *********')
-    BLTHICKkm_itpl=[]
-    BLTHICKp_itpl=[]
+    
     TIMES=[]
     RA=[]
-    RA_smooth=[]
     RA_BIN=[]
     PLMNO=[]
     PLMTK=[]
     NO_TK_plumes=[]
+
     seg=0
     startingTS=int(N_ONSET[i])
     endingTS=SPT1[i]
+
     for snip_ind in range(startingTS,endingTS,jump):
+
         print('SEG:', seg)
+
         spt0=snip_ind
         spt1=snip_ind+jump
 
@@ -151,6 +158,7 @@ for i in range(len(DIRS)): #for each of the models
 
         file = open(CSVWRITEDIR+MODS[i][:-1]+'.txt', 'a')
         file.write('\n snippet:'+str(seg)+': '+ str(spt0)+'->'+str(spt1)+'\n')
+        
         nums=NUMS[i][spt0:spt1]
         print('len nums:',len(nums))
         t0 = TM[i]
@@ -165,6 +173,7 @@ for i in range(len(DIRS)): #for each of the models
         blX_km=BL_X_KM[i]
         blX_pt=BL_X_PT[i]
         print(blX_km,blX_pt)
+
         meshdim=DIMS[i]
         if meshdim=='1024x256':
             mesh_y_dim=1024
@@ -188,19 +197,24 @@ for i in range(len(DIRS)): #for each of the models
         print(len(Tablemesh[0]))
         y=[float(i) for i in Tablemesh[0][0:mesh_y_dim]] # get the radii coords
         z=[float(i) for i in Tablemesh[0][mesh_y_dim::2*mesh_y_dim]] # get the z coords
+
         Y=len(y)
         Z=len(z)
+
         arrY=[i for i in range(1,Y+1)]
         arrZ=[i for i in range(1,Z+1)]
+
         eighth_of_dom=(mesh_y_dim//4)//8
         mm0=2*eighth_of_dom
         mm1=5*eighth_of_dom
         
         KMAXNUM=par.SNIPPETS_KMAXNUM
+
         WALLSIZE= int(np.floor(1.5*blX_pt)) #mesh_y_dim//128 
         WALLSIZE= int(np.floor(2*blX_pt)) # FOR 1300 ONLY
         WALLBOUNDL=WALLSIZE
         WALLBOUNDR=-1*WALLSIZE
+
         #############################################################
         midmantlen = [mm0,mm1]
         dims = [Y,Z]
@@ -212,7 +226,7 @@ for i in range(len(DIRS)): #for each of the models
         BLTHICKkm_1mod_itpl=[]
         BLTHICKp_1mod_itpl=[]
 
-        TIMES.append(Times)
+        TIMES.append(Times) # needed?
         RAplot=[]
         RAcritBIN=[]
         RAgrpPLT=[]
@@ -221,14 +235,10 @@ for i in range(len(DIRS)): #for each of the models
         PLMTK_1mod=[]
         NO_TK_plumes_1mod=[]
 
-        BLdim_p=0
-        BLdim_km=0.1
-
         #################################
         for n in nums: #for each time-step of each model
             N=int(n)
             #print('TIMESTEP:  ',n) # PRINT STATEMENT
-            #writerAVG.writerow([t]) # add the model time to the output csv file
 
             #################################
             # READ THE MOD/TS FILE
@@ -245,7 +255,7 @@ for i in range(len(DIRS)): #for each of the models
                     TableT.append(col)
                     
             #OPEN VISC FILE	
-            TableV=[];	
+            TableV=[]
             with open(openFileV) as f:
                 reader = csv.reader(f, delimiter=' ',quoting=csv.QUOTE_NONNUMERIC)
                 for col in reader:
@@ -259,13 +269,16 @@ for i in range(len(DIRS)): #for each of the models
 
             TGRAD=[spm.trimmedMean(spm.getRadSlice(i,TableT,pars)) for i in range(Z)]
             VGRAD=[spm.trimmedMeanV(spm.getRadSlice(i,TableV,pars)) for i in range(Z)]
+
             TGRAD_TRUE=[np.mean(spm.getRadSlice(i,TableT,pars)) for i in range(Z)]
             VGRAD_TRUE=[np.exp(np.mean(np.log(spm.getRadSlice(i,TableV,pars)))) for i in range(Z)]
+
             TGRAD=np.array(TGRAD)
             VGRAD=np.array(VGRAD)
 
             TMEAN = np.mean(TGRAD[mm0:mm1])
             VMEAN = np.mean(VGRAD[mm0:mm1])
+
             delt=tcmb-TMEAN
 
             ########################################
@@ -277,7 +290,6 @@ for i in range(len(DIRS)): #for each of the models
             BLDIM_km=blX_km
             BLDIM_p=blX_pt
          # ******************************************************************************************************************************************************
-
 
             RAloc_2 = spm.getRAlslice(BLDIM_p,BLDIM_km,delt,TableV,pars) #polynomial
             RAloc_2=RAloc_2[WALLBOUNDL:WALLBOUNDR]
@@ -306,6 +318,7 @@ for i in range(len(DIRS)): #for each of the models
             # PLOTS (each Time step)
             ##############################################################################
             if par.SNIPPETS_plotRalocandRac: # plot the boundary layer thickness across the Y domain
+
                 fig, ax = plt.subplots(1)
                 fig.set_size_inches(5,8)
                 fig.suptitle(MODS[i][:-1])
@@ -319,19 +332,18 @@ for i in range(len(DIRS)): #for each of the models
 
         RA.append(RAplot)
         RA_BIN.append(RAcritBIN)
+
         ####################################
-        print('TBL THICKNESS:',np.mean(BLDIM_km)) # PRINT STATEMENT
-        BLTHICKkm_itpl.append(BLTHICKkm_1mod_itpl)
-        BLTHICKp_itpl.append(BLTHICKp_1mod_itpl)
+        print('TBL THICKNESS:',np.mean(BLDIM_km))
 
         NO_TK_plumes.append(NO_TK_plumes_1mod)
         PLMNO.append(PLMNO_1mod)
+
         allplumes_1mod=sorted(flatten(PLMTK_1mod))
         allplumes=np.array(allplumes_1mod)
         allplumes.reshape(-1,1)
         
         PLMTK.append(sorted(allplumes))
-
 
         #  * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         # * * * * * * * *     KMEANS      * * * * * * * * * * * * 
@@ -339,6 +351,7 @@ for i in range(len(DIRS)): #for each of the models
 
         kmax=KMAXNUM
         CENTROIDS_1mod=[]
+
         print('NUMBER OF PLUMES:',len(allplumes))
         data = allplumes.reshape(-1,1)
         stats_empty=1
@@ -347,6 +360,7 @@ for i in range(len(DIRS)): #for each of the models
             continue
 
         if len(allplumes)>=kmax:
+
             SSdiff_CC=[]
             silo_1mod=[]
             DB_1mod=[]
@@ -354,15 +368,20 @@ for i in range(len(DIRS)): #for each of the models
             GAP_1mod=[]
             gapstat_1mod=[]
             SSdiff_elbow=[]
+
             for ii in range(1,kmax):
+
                 kmeans = KMeans(n_clusters=ii, random_state=0).fit(data)
                 ssdiff=kmeans.inertia_
                 labels=kmeans.labels_
+
                 std_per_feat=[]
                 num_per_feat=[]
+
                 for jj in range(ii):
                     std_per_feat.append(np.std([allplumes[x] for x in range(len(allplumes)) if labels[x]==jj]))
                     num_per_feat.append(len([allplumes[x] for x in range(len(allplumes)) if labels[x]==jj]))
+                
                 SSdiff_CC.append(ssdiff)
                 SSdiff_elbow.append([ii,ssdiff])
 
@@ -380,26 +399,33 @@ for i in range(len(DIRS)): #for each of the models
                     silo_1mod.append(0)
                     DB_1mod.append(1)
                     CH_1mod.append(0)
+
                     stats_empty=0
 
                 refDisps=[]
+
                 for r in range(100):
-                # Create new random reference set
+
+                    # Create new random reference set
                     randomReference = np.random.random_sample(size=data.shape)
                     # Fit to it
                     km = KMeans(ii)
                     km.fit(randomReference)
+
                     refDisp = km.inertia_
                     refDisps.append(refDisp)
                 # Fit cluster to original data and create dispersion
                 origDisp = kmeans.inertia_
+
                 # Calculate gap statistic
                 if origDisp==0.0:
                     gap = np.log(np.mean(refDisps))
                 else:
                     gap = np.log(np.mean(refDisps)) - np.log(origDisp)
                 # Assign this loop's gap statistic to gaps
+                
                 GAP_1mod.append(gap)
+
                 means = kmeans.cluster_centers_
                 means=flatten(means)
                 means=list(means)
@@ -408,21 +434,26 @@ for i in range(len(DIRS)): #for each of the models
 
                 clumpdata=list(zip(means,std_per_feat,num_per_feat))
                 clumpdata=sorted(clumpdata)
+
                 CENTROIDS_1mod.append([ii,[x[0] for x in clumpdata]])
+
                 print('[',ii,',',[x[0] for x in clumpdata],',',[x[1] for x in clumpdata],',',[x[2] for x in clumpdata],']')
                 file.write('['+str(seg)+','+str(ii)+','+str([x[0] for x in clumpdata])+','+str([x[1] for x in clumpdata])+','+str([x[2] for x in clumpdata])+','+str([Times[0], Times[-1]])+']\n')
+                
                 if ii==2 and par.SNIPPETS_makeK2stats:
+
                     sizes=[x[0] for x in clumpdata]
                     numbs=[x[2] for x in clumpdata]
+
                     HD_OV_CON_SZ.append(sizes[1]/sizes[0])
                     HD_OV_CON_NO.append(numbs[1]/numbs[0])
                     TM_SNP.append(Times[0]/TAU[i])
                     AVG_PL_NO.append(np.sum(numbs)/len_Time)
-                    print(TM_SNP)
-                    print(HD_OV_CON_SZ)
-                    print(HD_OV_CON_NO)
-                    print(AVG_PL_NO)
+
+                    print(TM_SNP, '\n',HD_OV_CON_SZ,'\n',HD_OV_CON_NO,'\n',AVG_PL_NO)
+
                 if ii>1 and par.SNIPPETS_showClustergroupsforK:
+
                     fig, ax = plt.subplots(1)
                     fig.set_size_inches(5,3)
                     fig.suptitle(MODS[i][:-1])
@@ -431,6 +462,7 @@ for i in range(len(DIRS)): #for each of the models
                     plt.show()
                     plt.clf()
                     plt.close()
+
                 if origDisp==0.0:
                     break
 

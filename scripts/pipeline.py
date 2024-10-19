@@ -12,7 +12,17 @@ import sys
 import stagyypythonmodule as spm
 from cmcrameri import cm
 
+'''
+This script is run 3 times throughout the analysis process and a series of binary flags from 
+the shell script indicate what inputs/outputs this pipeline produces. The first one is to read
+in the models that have a high time resolution to get the point of convective instability at the 
+bottom TBL.
+The second run is to obtain information about the depth of the convective domain in the stagnant lid 
+planet for the full models and write that information to file for easier use later.
+The third run is to use that information to detect plume material.
+'''
 
+# TODO: move this to the end of the global parameters file
 ############### COLOR MAPS 
 c_white = clr.colorConverter.to_rgba('white',alpha = 0)
 c_red=clr.colorConverter.to_rgba('red',alpha = 1)
@@ -47,6 +57,7 @@ SPT1 = par.STAGYY_MODS_SPT1
 DIMS = par.STAGYY_MODS_DIMS
 
 haveBLX_RAC=par.PIPELINE_HAS_BLX_RA
+
 if haveBLX_RAC:
     BL_X_KM = par.STAGYY_MODS_BL_X_KM
     BL_X_PT = par.STAGYY_MODS_BL_X_PT
@@ -60,6 +71,7 @@ calcKmeans=par.PIPELINE_calcKmeansBool
 calcConvReg=par.PIPELINE_CALC_CONV_REG
 BLplots=par.PIPELINE_makeBLplots
 
+# parameter flags controlling visualizations and statistics
 computecoldTBL=par.PIPELINE_computecoldTBL
 makeRavTimePlot=par.PIPLELINE_makeRavTimePlot
 makeBLvsTimeplot=par.PIPELINE_makeBLvsTimeplot
@@ -68,6 +80,7 @@ plotallmodsRavTime=par.PIPELINE_plotallmodsRavTime
 showStatsandScores=par.PIPELINE_showStatsandScores
 showViscprof=par.PIPELINE_showViscprof
 
+# parameter flags to indicate which path down the pipeline we traverse
 Write_Conv_Reg_Thick=par.PIPELINE_WRITE_CONV_REG
 Write_Bl_Rac_Pars=par.STAGYY_WRITE_BL_RAC_PARS
 Write_Raeff=par.STAGYY_WRITE_RA_EFF
@@ -86,7 +99,7 @@ SPT0=SPT0[startindmod:endin]
 SPT1=SPT1[startindmod:endin]
 DIMS=DIMS[startindmod:endin]
 
-if par.PIPELINE_HAS_BLX_RA:
+if haveBLX_RAC:
     RAC=RAC[startindmod:endin]
     BL_X_KM=BL_X_KM[startindmod:endin]
     BL_X_PT=BL_X_PT[startindmod:endin]
@@ -96,11 +109,13 @@ else:
     TAU=np.ones(len(MODS))
 
 print(MODS) # PRINT STATEMENT
+
 DIRS=[DIR+mod for mod in MODS]
 TDIRS=[TIMEDIR+mod for mod in MODS]
 # NUM_TimeSteps (the exact number of output files output by StagYY)
 NUM_TimeSteps = [len([file for file in os.listdir(dir) if file[0:2]=='t_']) for dir in DIRS] #new
 # Turn the number of output files into a string to loop through
+
 NUMS=[[str(i).zfill(5) for i in range(0,NUM_TimeSteps[j])] for j in range(len(MODS))]
 
 ##############################################################################
@@ -142,17 +157,12 @@ BLTHICKkm_itpl=[]
 BLTHICKp_itpl=[]
 
 TIMES=[]
-PIs=[]
-
 ALL_VMEAN=[]
 ALL_TMEAN=[]
 ALL_DELT = []
 
-ALL_VMEAN_TRUEvsTRIM=[]
-ALL_TMEAN_TRUEvsTRIM=[]
-
 T_for_kellog = []
-T_for_kellog_smooth = []
+
 RA=[]
 RA_BIN=[]
 
@@ -173,20 +183,24 @@ if Write_Raeff:
     raeff_file = open(par.RA_EFF_FILE+'raeff.txt', 'a')
 
 for i in range(len(DIRS)): #for each of the models
+
     dir=DIRS[i]
     nums=NUMS[i]
     t0 = TM[i]
     tcmb=TCMB[i]
     spt0=SPT0[i]
     spt1=SPT1[i]
+
     Times=spm.getTimeARR(TDIRS[i],spt0,spt1,1)  #time directory, step size
 
     if Write_Bl_Rac_Pars:
+
         onset_file = open(par.CONV_ONSET_FILE+MODS[i][:-1]+'.txt', 'w')
         onset_file.close()
         onset_file = open(par.CONV_ONSET_FILE+MODS[i][:-1]+'.txt', 'a')
 
     if haveBLX_RAC:
+
         n_onset=N_ONSET[i]
         print('n onset:',n_onset)
         spt0=int(np.ceil(n_onset))
@@ -214,6 +228,7 @@ for i in range(len(DIRS)): #for each of the models
     ################################################################################
     #OPEN MESH FILE	
     Tablemesh=[]
+
     with open('/Users/mkerr/VenusResearch/2023/STAGYY/Analysis/STAGmesh'+meshdim+'.csv') as f:
         reader = csv.reader(f)
         for col in reader:
@@ -221,29 +236,30 @@ for i in range(len(DIRS)): #for each of the models
                     
     y=[float(i) for i in Tablemesh[0][0:mesh_y_dim]] # get the radii coords
     z=[float(i) for i in Tablemesh[0][mesh_y_dim::2*mesh_y_dim]] # get the z coords
+
     Y=len(y)
     Z=len(z)
+
     arrY=[i for i in range(1,Y+1)]
     arrZ=[i for i in range(1,Z+1)]
+
     eighth_of_dom=(mesh_y_dim//4)//8
     mm0=2*eighth_of_dom
     mm1=5*eighth_of_dom
 
-    #print(z,Z)
-    #print(y,Y)
-
-    if par.PIPELINE_HAS_BLX_RA:
+    if haveBLX_RAC:
         WALLSIZE=int(np.floor(wallsizefactor*blX_pt)) #mesh_y_dim//128
     else:
         WALLSIZE=0
+
     WALLBOUNDL=WALLSIZE
     WALLBOUNDR=Y-WALLSIZE
 
-    ##############################################################################
     midmantlen = [mm0,mm1]
     dims = [Y,Z]
     # (DEFINED ABOVE) geom_pars = [domain_THICK,air_THICK,core_THICK,D_MantlenStag,mantle_THICK]
     # (DEFINED ABOVE) phys_pars=[a_exp,g,Cp,kappa,rho,therm_conductivity,H_flux,H_mass,ra_num_const]
+
     pars = [dims,phys_pars,geom_pars,midmantlen]
     RAD = spm.getRAD(TIMEDIR+MODS[i],pars)
 
@@ -262,9 +278,7 @@ for i in range(len(DIRS)): #for each of the models
 
     TIMES.append(Times)
     TPlot_for_kellog=[]
-    TPlot_for_kellog_smooth=[]
     RAplot=[]
-    RAplot_smooth=[]
     
     RAcritBIN=[]
     RAgrpPLT=[]
@@ -274,6 +288,7 @@ for i in range(len(DIRS)): #for each of the models
     PLMTK_1mod=[]
     NO_TK_plumes_1mod=[]
 
+    # initialize BL thickness, Ra_crit, and t_onset variables with min values
     BLDIM_p=0
     BLDIM_km=0.1
     ETA_half=1e25
@@ -292,17 +307,17 @@ for i in range(len(DIRS)): #for each of the models
     FULLCONV_RACOMB=[]
     TIMESCONVRA = []
     TIMESTAURA =[]
+
     #################################
     for n in nums[spt0:spt1]: #for each time-step of each model
+
         print('TIMESTEP:  ',n) # PRINT STATEMENT
         N=int(n)
         #writerAVG.writerow([t]) # add the model time to the output csv file
 
-        #################################
         # READ THE MOD/TS FILE
         openFileT= dir+'t_'+n+'.csv' #temp file to open
         openFileV= dir+'eta_'+n+'.csv' #visc file to open
-
 
         #OPEN TEMP FILE
         TableT=[]
@@ -313,7 +328,7 @@ for i in range(len(DIRS)): #for each of the models
                 TableT.append(col)
                 
         #OPEN VISC FILE	
-        TableV=[];	
+        TableV=[]	
         with open(openFileV) as f:
             reader = csv.reader(f, delimiter=' ',quoting=csv.QUOTE_NONNUMERIC)
             for col in reader:
@@ -326,16 +341,18 @@ for i in range(len(DIRS)): #for each of the models
 
         TGRAD=[spm.trimmedMean(spm.getRadSlice(i,TableT,pars)) for i in range(Z)]
         VGRAD=[spm.trimmedMeanV(spm.getRadSlice(i,TableV,pars)) for i in range(Z)]
+
         TGRAD_TRUE=[np.mean(spm.getRadSlice(i,TableT,pars)) for i in range(Z)]
         VGRAD_TRUE=[np.exp(np.mean(np.log(spm.getRadSlice(i,TableV,pars)))) for i in range(Z)]
+
         TGRAD=np.array(TGRAD)
         VGRAD=np.array(VGRAD)
 
         TMEAN = np.mean(TGRAD[mm0:mm1])
         VMEAN = np.mean(VGRAD[mm0:mm1])
+
         vmean_1mod.append(VMEAN)
         TMEAN_1mod.append(TMEAN)
-        
         tmean_truevtrim_1mod.append(TGRAD_TRUE-TGRAD)
         vmean_truevtrim_1mod.append(VGRAD_TRUE-VGRAD)
 
@@ -344,17 +361,21 @@ for i in range(len(DIRS)): #for each of the models
         #print('RATIO (vmean, vmin, vmin, rat1, rat2):', VMEAN, np.min(VGRAD), minVISC, VMEAN/np.min(VGRAD),VMEAN/minVISC)
 
         if calcConvReg:
+
             convregthk, botstag_temp = spm.getSTAGTHICK(TGRAD,VGRAD,RAD,Times[N-spt0],N,MODS[i][:-1],pars,tcmb,'trim',showViscprof,par.PIPELINE_VprofFreq)
             delTeff = rho*H_mass*(convregthk*10**3)**2/therm_conductivity
+
             rabot = (convregthk*10**3)**3 * rho**2 * Cp * g * a_exp * (tcmb-botstag_temp) / (therm_conductivity * VMEAN)
             raint = (convregthk*10**3)**3 * rho**2 * Cp * g * a_exp * delTeff / (therm_conductivity * VMEAN)
             racomb = (convregthk*10**3)**3 * rho**2 * Cp * g * a_exp * (delTeff+(tcmb-botstag_temp))/ (therm_conductivity*VMEAN)
             
             CONVREGTHK.append(convregthk)
             BOTCLDTBLTEMP.append(botstag_temp)
+
             FULLCONV_RABOT.append(rabot)
             FULLCONV_RAINT.append(raint)
             FULLCONV_RACOMB.append(racomb)
+
             TIMESCONVRA.append(Times[N-spt0])
             TIMESTAURA.append(Times[N-spt0]/TAU[i])
 
@@ -366,24 +387,30 @@ for i in range(len(DIRS)): #for each of the models
         ########################################
 
         THIGH=TMEAN+(0.1*delt)                                  # % TBL TEMP VALUE
+
         if computecoldTBL and calcConvReg:
+
             TLOW=TMEAN-(0.1*(TMEAN-botstag_temp)) #prof,rad,t,tstag,convregthk
+
             [BLkm_itpl_cold,BLp_itpl_cold] = spm.getBLptsITPL_cold(TGRAD,RAD,TLOW,botstag_temp,convregthk,tcmb)
         ### FROM TURCOTTE AND SHUBERT PG 184 ON HEAT TRANSFER
 # ******************************************************************************************************************************************************
         # BL across Y
         BLS_kms=[spm.getBLptsITPL(spm.getTprofile(yind,TableT,pars),RAD,THIGH,tcmb)[0] for yind in range(Y)]
         BLS_pts=[spm.getBLptsITPL(spm.getTprofile(yind,TableT,pars),RAD,THIGH,tcmb)[1] for yind in range(Y)]
+        
         #POLY FIT across Y
         poly_km = np.polyfit(arrY, BLS_kms, deg=2)
         poly_pts = np.polyfit(arrY, BLS_pts, deg=2)        
         BL_poly_km=np.polyval(poly_km, arrY)
         BL_poly_pt=np.polyval(poly_pts, arrY)
+        
         # single value BL calc from TGRAD
         [BLkm_itpl,BLp_itpl] = spm.getBLptsITPL(TGRAD,RAD,THIGH,tcmb)
 
         # the final value for this timestep:
         if BLDIM_km<BLkm_itpl:
+
             BLDIM_km=BLkm_itpl
             BLDIM_p=BLp_itpl
             ETA_half=10**(spm.getInterpVal(BLDIM_km,np.log10(VGRAD),RAD,np.log10(A_arrhenius*np.exp(E_act/(8.314*tcmb)))))
@@ -397,20 +424,24 @@ for i in range(len(DIRS)): #for each of the models
 
         #OVERWRITING BL with EXPIRICAL VALUES FROM OTHER EXP.
         if haveBLX_RAC:
+
             BLDIM_km=blX_km
             BLDIM_p=blX_pt
             RA_CRIT=Ra_c
 
         BLTHICKkm_1mod_itpl.append(BLDIM_km)
         BLTHICK_follow.append(BLkm_itpl)
+
         if haveBLX_RAC:
             RA_BL_1mod.append(Ra_c)
         else:
             RA_BL_1mod.append(a_exp*rho*g*delt*(BLkm_itpl*10**3)**3/(eta_half*kappa))
+
         BL3_eta_1mod.append((BLkm_itpl*1000)**3/VMEAN)
 
         Tshell_for_kellog = spm.getRadSlice_ITPL(BLDIM_p,0,TableT,pars)
         Vshell_for_kellog = spm.getRadSlice_ITPL(BLDIM_p,0,TableV,pars)
+
         RAloc_2 = spm.getRAlslice(BLDIM_p,BLDIM_km,delt,TableV,pars) #polynomial
         RAloc_2=RAloc_2[WALLBOUNDL:WALLBOUNDR]
 
@@ -418,22 +449,28 @@ for i in range(len(DIRS)): #for each of the models
         RAloc=RAloc[WALLBOUNDL:WALLBOUNDR]
         RAplot.append(RAloc_2)
 
-        if computecoldTBL and par.PIPELINE_HAS_BLX_RA:
+        if computecoldTBL and haveBLX_RAC:
+
             print('time:',Times[N],' \n tau:', Times[N]/TAU[i], '\nTMEAN:', TMEAN, '\nT_l',THIGH, '\ntcmb',tcmb,'\ndelT:', delt,'\ntlith',botstag_temp, '\neta:', VMEAN,'\nBL:',BLkm_itpl)
         
         if Write_Bl_Rac_Pars:
+
             if (N-spt0)>=1:
                 if BLTHICKkm_1mod_itpl[N]!=BLTHICKkm_1mod_itpl[N-1]:
                     onset_file.write('\nBL, '+ str(BLDIM_km) + ',' +str(BLDIM_p) + ','+ str(RA_CRIT))
+
             else:
                 onset_file.write('\nBL, '+ str(BLDIM_km) + ',' +str(BLDIM_p) + ','+ str(RA_CRIT))
         
         if BLplots and makeBLvsTimeplot and N%par.PIPELINE_BLplotfreq==0:
+
             fig, ax = plt.subplots(1)
             fig.set_size_inches(7,5)
             fig.suptitle(MODS[i][:-1])
+
             ax.plot(np.array(Times[:len(BLTHICKkm_1mod_itpl)])/TAU[i],BLTHICK_follow)
             ax.plot(np.array(Times[:len(BLTHICKkm_1mod_itpl)])/TAU[i],BLDIM_km*np.ones(len(BLTHICKkm_1mod_itpl)))
+            
             ax.set_ylabel('$l$ (km)',fontsize=15)
             ax.set_xlabel('overturns',fontsize=15)
             ax.grid(axis='both', which='major', color='0.25', linestyle='-')
@@ -442,13 +479,17 @@ for i in range(len(DIRS)): #for each of the models
             #plt.savefig('/Users/mkerr/VenusResearch/2023/STAGYY/Analysis/PLOTS/JUN22/WALL_TBLthk/TBL_crit/'+MODS[i][:-1]+'_'+str(N)+'.png',dpi=300)
             plt.clf()
             plt.close()
+
+
             
             fig, ax = plt.subplots(1)
             fig.set_size_inches(10,7)
             fig.suptitle(MODS[i][:-1])
+
             ax.plot(np.arange(len(RAloc_2)),np.array(RAloc_2),color='k')
             ax.plot(np.arange(len(RAloc)),np.array(RAloc),color='blue')
             ax.plot(np.arange(Y),np.ones(Y)*RA_CRIT,color='red')
+            
             ax.set_xticks(ticks=[0,Y//2,Y],labels=[0,'$\pi/2$','$\pi$'],fontsize=15)
             ax.set_yscale('log')
             ax.set_ylabel('RaC and RaL')
@@ -463,6 +504,7 @@ for i in range(len(DIRS)): #for each of the models
         ######################################
 
         if makeannotatedTprof and N%par.PIPELINE_TprofFreq==0: # plot the boundary layer thickness across the Y domain
+            
             fig, ax = plt.subplots(1)
             fig.set_size_inches(6,5)
             fig.suptitle(MODS[i][:-1]+'bl:'+str(np.mean(BLDIM_km))+'time:'+str(Times[N-spt0]/TAU[i]))
@@ -489,20 +531,19 @@ for i in range(len(DIRS)): #for each of the models
 
         if haveBLX_RAC==0:
             continue
+
         Ra_crit=RA_CRIT
         RA_binSLC=[el>=Ra_crit for el in RAloc_2]
+
         RAcritBIN.append(RA_binSLC)  # change here for plume vs slab detection
 # ******************************************************************************************************************************************************
 
         [pnum,pwid]=spm.plumeNo_Th(Ra_crit,BLkm_itpl,RAloc_2,1,pars)
         #[pnum,pwid]=spm.plumeNo_Th(Ra_crit,BLkm_itpl,RAloc,1,pars) #REMOVE THIS
 
-
         NO_TK_plumes_1mod.append([pnum,pwid])
         #trim_wid_lst=[wid for wid in pwid if (wid<=1000 and wid>40)]
         trim_wid_lst=[wid for wid in pwid]     
-
-        #print(pnum,pwid)
 
         if pnum==0:
             PLMNO_1mod.append(0)
@@ -512,6 +553,7 @@ for i in range(len(DIRS)): #for each of the models
             PLMNO_1mod.append(len(trim_wid_lst)) 
 # ******************************************************************************************************************************************************
     if calcConvReg and makeRavTimePlot:
+
         fig, ax = plt.subplots(3)
         #print([np.mean(FULLCONV_RABOT[i:i+20]) for i in range(0,len(CONVREGTHK)-21,20)])
         ax[0].scatter(TIMESTAURA,CONVREGTHK)
@@ -519,6 +561,7 @@ for i in range(len(DIRS)): #for each of the models
         ax[2].scatter(TIMESTAURA,FULLCONV_RABOT)
         ax[2].scatter(TIMESTAURA,FULLCONV_RAINT)
         ax[2].scatter(TIMESTAURA,FULLCONV_RACOMB)
+
         ax[2].set_xlabel('Time (overturns)')
         ax[0].set_ylabel('Conv. Dom. (km)')
         ax[1].set_ylabel('$\Delta T$ dom.')
@@ -526,11 +569,13 @@ for i in range(len(DIRS)): #for each of the models
         ax[2].set_yscale('log')
         print(np.mean(FULLCONV_RABOT))
         print(np.std(FULLCONV_RABOT))
+
         plt.show()
         plt.clf()
         plt.close()
     
     if Write_Conv_Reg_Thick:
+
         onset_file = open(par.CONV_ONSET_FILE+MODS[i][:-1]+'.txt', 'a')
         onset_file.write('\n '+str(len([BLTHICKkm_1mod_itpl[nn] for nn in range(len(BLTHICKkm_1mod_itpl)-1) if (BLTHICKkm_1mod_itpl[nn]<BLTHICKkm_1mod_itpl[nn+1])])))
         onset_file.write('\n ConvRegTh:, '+ str(np.mean(CONVREGTHK[30:])))
@@ -538,6 +583,7 @@ for i in range(len(DIRS)): #for each of the models
 
     ####################################
     print('TBL THICKNESS:',BLDIM_km) # PRINT STATEMENT
+
     BLTHICKkm_itpl.append(BLTHICKkm_1mod_itpl)
     BLTHICKp_itpl.append(BLTHICKp_1mod_itpl)
 
@@ -566,6 +612,7 @@ for i in range(len(DIRS)): #for each of the models
     if Write_Bl_Rac_Pars:
         onset_file.close()
     if calcKmeans:
+
         #  * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         # * * * * * * * *     KMEANS      * * * * * * * * * * * * 
         # * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -575,7 +622,9 @@ for i in range(len(DIRS)): #for each of the models
         data = allplumes.reshape(-1,1)
         #data = [radius**2 for radius in data]
         stats_empty=1
+
         if len(allplumes)>=kmax:
+
             SSdiff_CC=[]
             silo_1mod=[]
             DB_1mod=[]
@@ -583,19 +632,25 @@ for i in range(len(DIRS)): #for each of the models
             GAP_1mod=[]
             gapstat_1mod=[]
             SSdiff_elbow=[]
+
             for ii in range(1,kmax):
+
                 kmeans = KMeans(n_clusters=ii, random_state=0).fit(data)
+
                 ssdiff=kmeans.inertia_
                 labels=kmeans.labels_
                 std_per_feat=[]
                 num_per_feat=[]
+
                 for jj in range(ii):
                     std_per_feat.append(np.std([allplumes[x] for x in range(len(allplumes)) if labels[x]==jj]))
                     num_per_feat.append(len([allplumes[x] for x in range(len(allplumes)) if labels[x]==jj]))
+                
                 SSdiff_CC.append(ssdiff)
                 SSdiff_elbow.append([ii,ssdiff])
 
                 if ii!=1:
+
                     silo=skmet.silhouette_score(data, labels, metric='euclidean')
                     silo_1mod.append(silo)
 
@@ -605,6 +660,7 @@ for i in range(len(DIRS)): #for each of the models
 
                     CHsc=skmet.calinski_harabasz_score(data, labels)
                     CH_1mod.append(CHsc)
+
                 else:
                     silo_1mod.append(0)
                     DB_1mod.append(1)
@@ -613,19 +669,23 @@ for i in range(len(DIRS)): #for each of the models
 
                 refDisps=[]
                 for r in range(100):
-                # Create new random reference set
+
+                    # Create new random reference set
                     randomReference = np.random.random_sample(size=data.shape)
                     # Fit to it
                     km = KMeans(ii)
                     km.fit(randomReference)
                     refDisp = km.inertia_
                     refDisps.append(refDisp)
+                
                 # Fit cluster to original data and create dispersion
                 origDisp = kmeans.inertia_
+                
                 # Calculate gap statistic
                 gap = np.log(np.mean(refDisps)) - np.log(origDisp)
                 # Assign this loop's gap statistic to gaps
                 GAP_1mod.append(gap)
+
                 means = kmeans.cluster_centers_
                 means=flatten(means)
                 means=list(means)

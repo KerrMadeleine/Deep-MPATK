@@ -3,6 +3,12 @@ import numpy as np;
 import matplotlib.pyplot as plt;
 import csv;
 
+"""
+This script reads a StagYY output file called rprof.dat to obtain the 
+V_rms evolution data for use in determining "steady state"
+TODO: remove the csv reading and just use np.loadtxt :P
+"""
+
 baseDir = par.STAGYY_OUTPUT_FOLDER
 modeldirs = par.STAGYY_OUTPUT_MODS
 Directories = [baseDir+modeldirs[i] for i in range(len(modeldirs))]
@@ -60,10 +66,12 @@ for i in range(par.STAGYY_OUTPUT_MODS_0,par.STAGYY_OUTPUT_MODS_1):
 
 	temp=[]
 	for row in TableData:
+		
 		if row[0][0]=='*':
 			TimeSepData.append(temp)
 			temp=[]
 			temp.append(row[5])
+
 		else:
 			temp.append(row)
 
@@ -72,6 +80,7 @@ for i in range(par.STAGYY_OUTPUT_MODS_0,par.STAGYY_OUTPUT_MODS_1):
 	time=[]
 
 	for el in TimeSepData:
+
 		if len(el[0])==10:
 			time.append(float(el[0])/31556952/10**6)
 
@@ -79,8 +88,10 @@ for i in range(par.STAGYY_OUTPUT_MODS_0,par.STAGYY_OUTPUT_MODS_1):
 	temp2=[]
 	for tstep in TimeSepData:
 		data=tstep[1:]
+
 		for ii in range(len(data)):
 			temp2.append(data[ii])
+
 		Data0.append(temp2)
 		temp2=[]
 	
@@ -89,10 +100,14 @@ for i in range(par.STAGYY_OUTPUT_MODS_0,par.STAGYY_OUTPUT_MODS_1):
 	for j in range(len(time)):
 		MomData=[]
 		for k in range(57):
+
 			parData=[]
 			for row in Data0[j]:
+
 				parData.append(float(row[k]))
+
 			MomData.append(parData)
+
 		Data1.append(MomData)
 	
 	rad=Data1[0][0] #initial depth list
@@ -108,30 +123,38 @@ for i in range(par.STAGYY_OUTPUT_MODS_0,par.STAGYY_OUTPUT_MODS_1):
 	last=1
 	
 	for ii in range(len(time))[0:-last:Hrng+1]:
+
 		avgTprof=[np.mean([Data1[k][Datakey][j] for k in range(ii-Hrng,ii+Hrng+1)]) for j in range(0,len(rad))]
 		viscprof=[np.mean([Data1[k][13][j] for k in range(ii-Hrng,ii+Hrng+1)]) for j in range(0,len(rad))]
 		vrmsprof=[np.mean([Data1[k][4][j] for k in range(ii-Hrng,ii+Hrng+1)]) for j in range(0,len(rad))]
+		
 		ListAvgProfs.append(avgTprof)
 		ViscProfs.append(viscprof)
 		VrmsProfs.append(vrmsprof)
 		viscprof=[]
 		avgTprof=[]
+
 		ListAvgNames.append(str(time[ii])+' Myrs')
 		ListTimes.append(time[ii])
 	
 	L= len(ListAvgProfs)
 
 	def mantle_vrms(r_km,vrmsprofiles,limr0,limr):
+
 		dr_km=[(r_km[jj+1]-r_km[jj]) for jj in range(limr0,limr+1,1)]
 		r_km=r_km[1:]
 		vrms_mantle=[]
+
 		for t in range(len(vrmsprofiles)):
 			sum=0
 			sum_ws=0
+
 			for sh in range(len(dr_km)):
 				sum=sum+dr_km[sh]*r_km[sh]*np.pi*(vrmsprofiles[t][limr0+sh])**2
 				sum_ws=sum_ws+dr_km[sh]*r_km[sh]*np.pi
+
 			vrms_mantle.append(np.sqrt(sum/sum_ws))
+
 		return vrms_mantle
 	##################################################
 
