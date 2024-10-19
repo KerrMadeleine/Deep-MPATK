@@ -8,39 +8,40 @@
 
 # stagyy binary output into csv files 
 echo 'READING STAGYY TO BINARY'
-#python3 read_stagyy_bin.py
+#python read_stagyy_bin.py 0 0 0 # for regular models
+#python read_stagyy_bin.py 0 1 0 # for high-time-res models
 
 
 # csv to plotting scalar fields
 echo 'PLOTTING T, RHO, VISC, FIELDS'
-#python3 plot_fields_spherical.py 0 0 0
+python plot_fields_spherical.py 0 0 0
 
 
 writeBL_RACdata=1
 haveBL_RACdata=0
 writeraeff=0
 echo 'PIPELINE USING HIGHER RES MODELS'
-#python3 pipeline.py $haveBL_RACdata $writeBL_RACdata $writeraeff
+#python pipeline.py $haveBL_RACdata $writeBL_RACdata $writeraeff
 
 writeBL_RACdata=0
 haveBL_RACdata=0
 writeraeff=1
 echo 'PIPELINE USING NORMAL MODELS, WRITING RAEFF and CONV REG'
-#python3 pipeline.py $haveBL_RACdata $writeBL_RACdata $writeraeff
+#python pipeline.py $haveBL_RACdata $writeBL_RACdata $writeraeff
 
 # plotting velocity versus time to get Vrms
 echo 'PLOTTING VRMS DATA'
-#python3 read_rprof.py $haveBL_RACdata $writeBL_RACdata $writeraeff
+#python read_rprof.py $haveBL_RACdata $writeBL_RACdata $writeraeff
 
 echo 'CONV ONSET CALC USING '
-#python3 conv_onset_pars.py $haveBL_RACdata $writeBL_RACdata $writeraeff
+#python conv_onset_pars.py $haveBL_RACdata $writeBL_RACdata $writeraeff
 
 writeBL_RACdata=0
 haveBL_RACdata=1
 writeraeff=0
 echo 'PIPELINE'
-#python3 pipeline.py $haveBL_RACdata $writeBL_RACdata $writeraeff
+#python pipeline.py $haveBL_RACdata $writeBL_RACdata $writeraeff
 
 
 echo 'SNIPPETS'
-python3 snippets.py $haveBL_RACdata $writeBL_RACdata $writeraeff
+#python snippets.py $haveBL_RACdata $writeBL_RACdata $writeraeff

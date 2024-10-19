@@ -10,11 +10,16 @@ import os
 import stagyypythonmodule as spm
 from cmcrameri import cm
 
+"""
+This script plots the temperature, viscosity and density fields over the domain
+and saves these figures.
+"""
+
 DIR=par.STAGYY_OUTPUT_FOLDER
 TIMEDIR= par.STAGYY_OUTPUT_FOLDER
 MESHDIR = par.STAGYY_OUTPUT_MESH_FOLDER
 
-
+# TODO: move this to global parameters
 ############### COLOR MAPS 
 c_white = clr.colorConverter.to_rgba('white',alpha = 0)
 c_red=clr.colorConverter.to_rgba('red',alpha = 1)
@@ -102,9 +107,12 @@ phys_pars=[a_exp,g,Cp,kappa,rho,therm_conductivity,H_flux,H_mass,ra_num_const]
 ##############################################################################
 # LOOP THROUGH DIRECTORIES
 ##############################################################################
-
+os.makedirs(par.STAGYY_DEEPMPATK_OUTPUT_DIR+'figures', exist_ok = True)
 for i in range(len(DIRS)): #for each of the models
     print('Making plots for:', MODS[i])
+    save_fig_dir=par.STAGYY_DEEPMPATK_OUTPUT_DIR+'figures/'+MODS[i][:-1]
+    os.makedirs(save_fig_dir, exist_ok = True)
+
     dir=DIRS[i]
     nums=NUMS[i]
     spt0=SPT0[i]
@@ -113,6 +121,7 @@ for i in range(len(DIRS)): #for each of the models
     Times=spm.getTimeARR(TDIRS[i],spt0,spt1,1)  #time directory, step size
     nums_int = [int(n)for n in nums[spt0:]]
     meshdim=DIMS[i]
+    print("Mesh dimensions:", meshdim)
     if meshdim=='1024x256':
         mesh_y_dim=1024
     elif meshdim=='512x128':
@@ -159,7 +168,7 @@ for i in range(len(DIRS)): #for each of the models
 
     ###########################################################################
     for n in nums[spt0:spt1+1]: #for each time-step of each model
-        print('TIMESTEP:  ',n) # PRINT STATEMENT
+        print('TIMESTEP:  ',n,end='\r') # PRINT STATEMENT
         N=int(n)
         #writerAVG.writerow([t]) # add the model time to the output csv file
 
@@ -170,7 +179,6 @@ for i in range(len(DIRS)): #for each of the models
 
         if yesRHO:
             openFileR= dir+'rho_'+n+'.csv' #visc file to open
-
 
         #OPEN TEMP FILE
         TableT=[]
@@ -196,7 +204,7 @@ for i in range(len(DIRS)): #for each of the models
                     #print(col)
                     TableR.append(col)
 
-
+        #print("shape of table T",len(TableT),len(TableT[0]))
         TableT=np.ravel(TableT,order='C')
         TableV=np.ravel(TableV,order='C')
 
@@ -220,6 +228,7 @@ for i in range(len(DIRS)): #for each of the models
         if yesRHO:
             R=np.array([spm.getRadSlice(i,TableR,pars) for i in range(Z)])
             R=np.fliplr(R)
+        
         T=np.array([spm.getRadSlice(i,TableT,pars) for i in range(Z)])
         V=np.log10(np.array([spm.getRadSlice(i,TableV,pars) for i in range(Z)])) #-np.log10(VMEAN)
         V=np.fliplr(V)
@@ -231,7 +240,7 @@ for i in range(len(DIRS)): #for each of the models
         fig.suptitle('T at t='+str(Times[N-spt0])[:6]+' Myr',size=20)
         XCMB,YDEP = np.meshgrid(arrY,RAD_PLT)
         if par.PFS_diffFromMeanT:
-            c=ax.pcolor(XCMB,YDEP,T-TMEAN,cmap=cm.lajolla,vmin=-100,vmax=100)
+            c=ax.pcolor(XCMB,YDEP,T-TMEAN,cmap=cm.lajolla,vmin=-200,vmax=200)
         else:
             c=ax.pcolor(XCMB,YDEP,T,cmap=cm.lajolla,vmin=1000,vmax=3500)
         ax.set_rticks([3110,3110+mantle_THICK])  # Less radial ticks
@@ -241,7 +250,7 @@ for i in range(len(DIRS)): #for each of the models
         fig.colorbar(c,cax=cax)
         plt.subplots_adjust(left=0.07, bottom=0, right=0.9, top=1, wspace=0, hspace=0)
         if savefigures:
-            plt.savefig(DIR+MODS[i]+str(N)+'_T.png',dpi=400)
+            plt.savefig(save_fig_dir+'/'+str(N)+'_T.png',dpi=400)
         if showfigures:
             plt.show()
         plt.clf()
@@ -259,7 +268,7 @@ for i in range(len(DIRS)): #for each of the models
         fig.colorbar(c,cax=cax)
         plt.subplots_adjust(left=0.07, bottom=0, right=0.9, top=1, wspace=0, hspace=0)
         if savefigures:
-            plt.savefig(DIR+MODS[i]+str(N)+'_V.png',dpi=400)
+            plt.savefig(save_fig_dir+'/'+str(N)+'_V.png',dpi=400)
         if showfigures:
             plt.show()
         plt.clf()
@@ -278,7 +287,7 @@ for i in range(len(DIRS)): #for each of the models
             fig.colorbar(c,cax=cax)
             plt.subplots_adjust(left=0.07, bottom=0, right=0.9, top=1, wspace=0, hspace=0)
             if savefigures:
-                plt.savefig(DIR+MODS[i]+str(N)+'_R.png',dpi=400)
+                plt.savefig(save_fig_dir+'/'+'_R.png',dpi=400)
             if showfigures:
                 plt.show()
             plt.clf()

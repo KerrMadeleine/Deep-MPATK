@@ -4,7 +4,7 @@ Deep-Mantle Plume Analysis ToolKit
 ###################################
 
 install python packages:
-- numpy 
+- numpy (basic math and array functionality)
 - matplotlib (plotting)
 - sklearn (unsupervised learning algorithm and statistics)
 - csv

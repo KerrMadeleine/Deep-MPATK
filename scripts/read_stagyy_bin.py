@@ -33,7 +33,7 @@ for mod in par.STAGYY_OUTPUT_MODS[par.STAGYY_OUTPUT_MODS_0:par.STAGYY_OUTPUT_MOD
         for tstep in range(tstep0,tstep1,tstep_step): #each time step
             tstepstr=str(tstep).zfill(5)
             fname= '_'+field+tstepstr
-            print(fname)
+            print(fname+'/'+str(tstep1),end='\r')
 
             # get binary data from file. change dtype if your output is a different accuracy
             data = np.fromfile(dir+fname, dtype=np.float64)
