@@ -18,6 +18,8 @@ MODS are models, DIMS are dimensions, TCMB is the temperature at the core-mantle
 TM is the initialized mantle potential temperature.
 TODO: more description of global variable names
 """
+
+
 STAGYY_WRITE_BL_RAC_PARS=int(sys.argv[2])
 
 if STAGYY_WRITE_BL_RAC_PARS:
@@ -38,7 +40,7 @@ The global variables defined here
 
 STAGYY_OUTPUT_MODS=['1300_1/','1400_1/','1500_1/','1600_1/','1700_1/','1800_1/','1900_1/']
 STAGYY_MODS_DIMS= ['512x128','512x128','512x128','1024x256','1024x256','1024x256','1024x256'] 
-STAGYY_MODS_SPT0=[842,1019,976,200,0,0,0] 
+STAGYY_MODS_SPT0=[842,1019,1922,601,685,631,666] 
 #STAGYY_MODS_SPT0=[842,1019,976,528,517,460,485] 
 STAGYY_MODS_TCMB=[1400,1500,1600,1700,1800,1900,2000]
 STAGYY_MODS_TM=[1300,1400,1500,1600,1700,1800,1900]
@@ -70,6 +72,8 @@ RA_EFF_FILE='/Volumes/easystore/ProjectFolders/Deep-MPATK/output/ra_eff/'
 #CONV_ONSET_MOD_PARS='/Users/mkerr/VenusResearch/2023/MEASURE_KERR_2023/Deep-MPATK/output/conv_onset/'
 CONV_ONSET_MOD_PARS='/Volumes/easystore/ProjectFolders/Deep-MPATK/output/conv_onset/'
 
+
+
 STAGYY_OUTPUT_MODS_0=3
 STAGYY_OUTPUT_MODS_1=4
 
@@ -77,17 +81,22 @@ STAGYY_OUTPUT_MODS_1=4
 
 # READ_TIME.PY 
 READSTAGBIN_fields = ['eta','t'] # field name 't', 'eta', doesnt work with velocity/pressure yet.
-READSTAGBIN_tstep0=200
-READSTAGBIN_tstep1=528 # time-step
+READSTAGBIN_tstep0= 600 #200
+READSTAGBIN_tstep1= 602# time-step
 READSTAGBIN_tstep_step=1
-READSTAGBIN_y_dim = 1024 #512 # grid dim on horz axis
-READSTAGBIN_z_dim = 256 #128 # grid dim on vert axis
+READSTAGBIN_y_dim = 1024 # grid dim on horz axis
+READSTAGBIN_z_dim = 256 # grid dim on vert axis
+
+
 """
 For reading the StagYY binary files, it is important to know how the domain is split between cores.
-1 x 1 core geometry for all hi-time-res models
-2 x 8 for 1300 - 1500 K all times
-2 x 16 for 1600 - ? K for ? times
-2 x 8 for 1700, initially, I think it changes. check soon.
+1 x 1 core geometry for all hi-time-res models  
+2 x 8 for 1300 - 1500 K all times x
+2 x 16 for 1600 K all times x (602)
+2 x 8 for 1700 K, initially (0-356), then 2 x 16 (357 to 512) x | o  (685)
+2 x 8 for 1800 K, initially (0-283), then 2 x 16 ( 283 to 460) x | o (631)
+2 x 8 for 1900 K all times o (666)
+
 Important to know that some models were run with 16 cores, then 32 so everythings a bit wonky here
 """
 READSTAGBIN_nz_cores = 2 #2 #2 #number of core-blocks vertically
@@ -95,8 +104,8 @@ READSTAGBIN_ny_cores = 16 #8 #8 # number of core-blocks horizontally
 if STAGYY_WRITE_BL_RAC_PARS:
     # The hi res models were run locally on my laptop, so the structure of the binary files 
     # is different based on the way the domain is divided for each CPU
-    READSTAGBIN_nz_cores = 1 #2 #number of core-blocks vertically
-    READSTAGBIN_ny_cores = 1 #8 # number of core-blocks horizontally
+    READSTAGBIN_nz_cores = 1 #number of core-blocks vertically
+    READSTAGBIN_ny_cores = 1 # number of core-blocks horizontally
 READSTAGBIN_meshdir='/Users/mkerr/VenusResearch/2023/STAGYY/Analysis/STAGmesh'+str(READSTAGBIN_y_dim)+'x'+str(READSTAGBIN_z_dim)+'.csv'
 READSTAGBIN_showPlot_bool=0
 READSTAGBIN_writetocsv_bool=1
@@ -104,11 +113,10 @@ READSTAGBIN_writetocsv_bool=1
 
 
 
-
 # PLOT_FIELDS_SPHERICAL.PY
 PFS_printVTR=0
-PFS_savefigures=1
-PFS_showfigures=0
+PFS_savefigures=0
+PFS_showfigures=1
 PFS_diffFromMeanT=1
 
 
