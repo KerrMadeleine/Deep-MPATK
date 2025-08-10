@@ -46,7 +46,8 @@ for mod in par.STAGYY_OUTPUT_MODS[par.STAGYY_OUTPUT_MODS_0:par.STAGYY_OUTPUT_MOD
             ax[1].plot(range(len(data_begin)), data_begin)
             if showPlot_bool:
                 plt.show()
-                print('not showing this plot')
+            #else:
+            #    print('not showing this plot')
             plt.clf()
             plt.close()
 

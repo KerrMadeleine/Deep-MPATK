@@ -182,8 +182,8 @@ for i in range(par.STAGYY_OUTPUT_MODS_0,par.STAGYY_OUTPUT_MODS_1):
 		print(i)
 		print(Directories)
 		plt.savefig(Directories[i]+'a_VRMS_plot.png')
-	if showfigure:
-		plt.show()
+	#if showfigure:
+	plt.show()
 	plt.clf()
 	plt.close()
 

@@ -8,13 +8,13 @@
 
 # stagyy binary output into csv files 
 echo 'READING STAGYY TO BINARY'
-#python read_stagyy_bin.py 0 0 0 # for regular models
+python read_stagyy_bin.py 0 0 0 # for regular models
 #python read_stagyy_bin.py 0 1 0 # for high-time-res models
 
 
 # csv to plotting scalar fields
 echo 'PLOTTING T, RHO, VISC, FIELDS'
-python plot_fields_spherical.py 0 0 0
+#python plot_fields_spherical.py 0 0 0
 
 
 writeBL_RACdata=1
