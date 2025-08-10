@@ -11,5 +11,14 @@ install python packages:
 - os
 - cmcrameri (scientific color maps)
 
+
+v.0.
 change the file paths and analysis parameters in set_DeepMPATK_pars.py
 run the shell script run_DeepMPATK.sh
+
+v.1.
+
+Use the StagModelClass.py to analyze models. Sample scripts that use the class are provided with "_1", "_2", etc. in the order it makes sense to run them in
+scripts without numbers are from v.0.
+
+
